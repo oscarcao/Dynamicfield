@@ -3,11 +3,11 @@
 **This module is working, but in a very alpha version. Using is at your own risk!**
 **You are welcome to work on it**
 
-## Introduction
+## Configuration
 
 Please add following to ```asgard.page.config.php```:
 
-```php
+```
 <?php
 
 return [
@@ -45,6 +45,22 @@ return [
     ],
 ];
 
+```
+
+## Setup
+
+At the present time, you will need to manually run the following commands:
+
+```
+php artisan module:migrate dynamicfield
+```
+
+```
+php artisan module:seed dynamicfield
+```
+
+```
+php artisan module:publish dynamicfield
 ```
 
 ## Usage
