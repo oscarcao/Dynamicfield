@@ -1,11 +1,11 @@
 {
-	"name": "stonelab/Dynamicfield",
-	"description": "",
+    "name": "stonelab/Dynamicfield",
+    "description": "",
+    "version": "0.8.7.1",
     "type": "asgard-module",
     "require": {
         "php": ">=5.4",
-        "composer/installers": "~1.0",
-        "asgardcms/core-module": "~1.0"
+        "idavoll/core-module": "~2.0"
     },
     "require-dev": {
         "phpunit/phpunit": "~4.0",
@@ -23,6 +23,10 @@
 		{
 			"name": "Simon Funk",
 			"email": "simon.funk@treestones.ch"
+		},
+		{
+			"name": "Oscar Cao",
+			"email": "oscar@oscarcao.com"
 		}
 	],
 	"autoload": {

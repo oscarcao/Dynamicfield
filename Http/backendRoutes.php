@@ -16,16 +16,16 @@ $router->group(['prefix' => '/dynamicfield'], function (Router $router) {
         'update' => 'admin.dynamicfield.group.update',
         'destroy' => 'admin.dynamicfield.group.destroy',
     ]]);
-    get('group/edit/{group}', ['as' => 'admin.dynamicfield.group.edit', 'uses' => 'GroupFieldsController@edit']);
-    post('group/renderOption', ['as' => 'admin.dynamicfield.group.renderOption', 'uses' => 'GroupFieldsController@renderOption']);
-    post('group/renderRepeaterOption', ['as' => 'admin.dynamicfield.group.renderRepeaterOption', 'uses' => 'GroupFieldsController@renderRepeaterOption']);
-    post('group/edit/renderOption', ['as' => 'admin.dynamicfield.group.renderOption', 'uses' => 'GroupFieldsController@renderOption']);
-    post('group/edit/renderRepeaterOption', ['as' => 'admin.dynamicfield.group.renderRepeaterOption', 'uses' => 'GroupFieldsController@renderRepeaterOption']);
-    post('group/renderControl', ['as' => 'admin.dynamicfield.group.renderControl', 'uses' => 'GroupFieldsController@ajaxRender']);
-    post('group/edit/renderLocationDrop', ['as' => 'admin.dynamicfield.group.renderLocationDrop', 'uses' => 'GroupFieldsController@renderLocationDrop']);
-    post('group/renderLocationDrop', ['as' => 'admin.dynamicfield.group.renderLocationDrop', 'uses' => 'GroupFieldsController@renderLocationDrop']);
+    $router->get('group/edit/{group}', ['as' => 'admin.dynamicfield.group.edit', 'uses' => 'GroupFieldsController@edit']);
+    $router->post('group/renderOption', ['as' => 'admin.dynamicfield.group.renderOption', 'uses' => 'GroupFieldsController@renderOption']);
+    $router->post('group/renderRepeaterOption', ['as' => 'admin.dynamicfield.group.renderRepeaterOption', 'uses' => 'GroupFieldsController@renderRepeaterOption']);
+    $router->post('group/edit/renderOption', ['as' => 'admin.dynamicfield.group.renderOption', 'uses' => 'GroupFieldsController@renderOption']);
+    $router->post('group/edit/renderRepeaterOption', ['as' => 'admin.dynamicfield.group.renderRepeaterOption', 'uses' => 'GroupFieldsController@renderRepeaterOption']);
+    $router->post('group/renderControl', ['as' => 'admin.dynamicfield.group.renderControl', 'uses' => 'GroupFieldsController@ajaxRender']);
+    $router->post('group/edit/renderLocationDrop', ['as' => 'admin.dynamicfield.group.renderLocationDrop', 'uses' => 'GroupFieldsController@renderLocationDrop']);
+    $router->post('group/renderLocationDrop', ['as' => 'admin.dynamicfield.group.renderLocationDrop', 'uses' => 'GroupFieldsController@renderLocationDrop']);
 
-    post('media/link', ['as' => 'admin.dynamicfield.media.linkMedia', 'uses' => 'MediaController@linkMedia']);
-    get('page/{page}/duplicate', ['as' => 'admin.dynamicfield.page.duplicate', 'uses' => 'GroupFieldsController@duplicate']);
+    $router->post('media/link', ['as' => 'admin.dynamicfield.media.linkMedia', 'uses' => 'MediaController@linkMedia']);
+    $router->get('page/{page}/duplicate', ['as' => 'admin.dynamicfield.page.duplicate', 'uses' => 'GroupFieldsController@duplicate']);
 
 });

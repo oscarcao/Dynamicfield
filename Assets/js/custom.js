@@ -659,8 +659,8 @@ function changeLocationParameter(obj,value){
 				datatype: 'json',
 				data : reqData +"&ajax=true",
 				success : function(responseData) {
-					var data = eval(responseData);
-					tr.find('td.value').html(data.html);
+					//var data = eval(responseData);
+					tr.find('td.value').html(responseData);
 			}
 	});
 }

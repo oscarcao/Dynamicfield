@@ -3,9 +3,12 @@
 namespace Modules\Dynamicfield\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Modules\Core\Traits\CanPublishConfiguration;
 
 class DynamicfieldServiceProvider extends ServiceProvider
 {
+    use CanPublishConfiguration;
+
     /**
      * Indicates if loading of the provider is deferred.
      *
@@ -15,7 +18,15 @@ class DynamicfieldServiceProvider extends ServiceProvider
 
     public function boot()
     {
+        $this->mergeConfigFrom(__DIR__ . '/../Config/config.php', 'asgard.dynamicfield.config');
+
+        $this->publishes([__DIR__ . '/../Config/config.php' => config_path('asgard.dynamicfield.config' . '.php'), ], 'config');
+
+        $this->publishConfig('dynamicfield', 'permissions');
+        
+        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
     }
+
     /**
      * Register the service provider.
      */

@@ -56,7 +56,7 @@ After you've created your first Dynamicfield, you can go to the Page create/edit
 If nothing happens, make sure the dynamic-fields.js is loaded. Clear Cache and run the "module:publish dynamicfield" command
 
 After you have created your Dynamicfield, set up your page and filled your data, your able to get the datas on your page template through the:
-```php
+```
 $dynamicfields
 ```
 It's an array and inside are all fields, as well the repeater fields.

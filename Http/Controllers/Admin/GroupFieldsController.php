@@ -78,7 +78,7 @@ class GroupFieldsController extends AdminBaseController
             $tran_core = 'core::core.messages.resource updated';
         }
         if ($bResult) {
-            flash()->success(trans($tran_core, ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
+            return redirect()->route('admin.dynamicfield.group.index')->withSuccess(trans($tran_core, ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
         }
 
         return redirect()->route('admin.dynamicfield.group.index');
@@ -93,7 +93,6 @@ class GroupFieldsController extends AdminBaseController
     {
         $fields     = $group->getListFields();
         $locations  = Rule::where('group_id', '=', $group->id)->get();
-
         return view('dynamicfield::admin.group.edit', compact('group', 'fields', 'locations'));
     }
 
@@ -106,9 +105,8 @@ class GroupFieldsController extends AdminBaseController
     public function update(Group $group, Request $request)
     {
         $this->group->update($group, $request->all());
-        flash()->success(trans('core::core.messages.resource updated', ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
 
-        return redirect()->route('admin.dynamicfield.group.index');
+        return redirect()->route('admin.dynamicfield.group.index')->withSuccess(trans('core::core.messages.resource updated', ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
     }
 
     /**
@@ -119,9 +117,8 @@ class GroupFieldsController extends AdminBaseController
     public function destroy(Group $group)
     {
         $this->group->destroy($group);
-        flash()->success(trans('core::core.messages.resource deleted', ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
 
-        return redirect()->route('admin.dynamicfield.group.index');
+        return redirect()->route('admin.dynamicfield.group.index')->withSuccess(trans('core::core.messages.resource deleted', ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
     }
 
     /**
@@ -193,10 +190,8 @@ class GroupFieldsController extends AdminBaseController
     public function duplicate(Page $page)
     {
         $this->page->replicate($page);
-
-        flash(trans('dynamicfield::messages.page.duplicate successful'));
-
-        return redirect()->route('admin.page.page.index');
+        
+        return redirect()->route('admin.page.page.index')->withSuccess(trans('dynamicfield::messages.page.duplicate successful'));
     }
 
     /**
@@ -220,8 +215,9 @@ class GroupFieldsController extends AdminBaseController
                 $arrData    = $this->template->getTemplates();
                 break;
         }
-        $html = FormFacade::select($name, $arrData, $value, ['class' => "form-control"]);
+        //$html = FormFacade::select($name, $arrData, $value, ['class' => "form-control"]);
 
-        return response()->json(['html' => $html]);
+        return response(FormFacade::select($name, $arrData, $value, ['class' => "form-control"]));
+        //return response()->json(['html' => $html]);
     }
 }
