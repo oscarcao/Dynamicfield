@@ -240,7 +240,8 @@ class Repeater extends FieldBase
             foreach ($headers as $field) {
                 $tdHeader .= sprintf("<th class='caption' width='%s'>%s</th>", $columnWidth . '%', $field->getLabel());
                 $field->setLabel('');
-                $tdTemplate .= sprintf("<td width='%s'>%s</td>", $columnWidth . '%', $field->render());
+                $fieldContent = str_replace('0', 'clone', $field->render());
+                $tdTemplate .= sprintf("<td width='%s'>%s</td>", $columnWidth . '%', $fieldContent);
             }
 
             $groupName = $this->locale . '[fields][%s][order][%s]';
