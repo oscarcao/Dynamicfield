@@ -1,7 +1,7 @@
 {
     "name": "stonelab/Dynamicfield",
     "description": "",
-    "version": "0.8.7.1",
+    "version": "0.8.7.2",
     "type": "asgard-module",
     "require": {
         "php": ">=5.4",
