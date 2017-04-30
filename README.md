@@ -63,6 +63,10 @@ php artisan module:seed dynamicfield
 php artisan module:publish dynamicfield
 ```
 
+```
+php artisan module:publish-translation
+```
+
 ## Usage
 
 Creat a new Dynamicfield and select on the right side on which page template you wanna use it.
