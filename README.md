@@ -64,7 +64,7 @@ php artisan module:publish dynamicfield
 ```
 
 ```
-php artisan module:publish-translation
+php artisan module:publish-translation dynamicfield
 ```
 
 ## Usage
