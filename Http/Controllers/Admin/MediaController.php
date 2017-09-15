@@ -42,8 +42,9 @@ class MediaController extends AdminBaseController
             'error' => false,
             'message' => 'The link has been added.',
             'result' => [
-                          'path' => $path,
-                          'thumb' => $thumbnailPath,
+                'path' => $path,
+                'thumb' => $thumbnailPath,
+                'imageableId' => $mediaId,
             ],
         ]);
     }

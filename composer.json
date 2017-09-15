@@ -1,7 +1,7 @@
 {
-    "name": "stonelab/Dynamicfield",
-    "description": "",
-    "version": "0.8.7.2",
+	"name": "stone-lab/Dynamicfield",
+	"description": "",
+    "version": "0.9",
     "type": "asgard-module",
     "require": {
         "php": ">=5.4",
@@ -15,14 +15,21 @@
         "psr-4": {
             "Modules\\Dynamicfield\\": ".",
             "Modules\\": "Modules/"
-        }
+        },
+        "files" : [
+          "Modules/Dynamicfield/Database/factories/ModelFactory.php"
+        ]
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
 	"authors": [
+        {
+            "name": "Simon Funk",
+            "email": "simon.funk@treestones.ch" 
+        },
 		{
-			"name": "Simon Funk",
-			"email": "simon.funk@treestones.ch"
+			"name": "Paul Quinn",
+			"email": "paul.mark.quinn@googlemail.com"
 		},
 		{
 			"name": "Oscar Cao",
@@ -32,6 +39,9 @@
 	"autoload": {
 		"psr-4": {
 			"Modules\\Dynamicfield\\": ""
-		}
+		},
+        "files" : [
+          "helpers.php"
+        ]
 	}
 }

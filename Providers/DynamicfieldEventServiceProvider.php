@@ -2,7 +2,6 @@
 
 namespace Modules\Dynamicfield\Providers;
 
-use Illuminate\Contracts\Events\Dispatcher as DispatcherContract;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 class DynamicfieldEventServiceProvider extends ServiceProvider
@@ -19,7 +18,6 @@ class DynamicfieldEventServiceProvider extends ServiceProvider
     /**
      * Register any other events for your application.
      *
-     * @param \Illuminate\Contracts\Events\Dispatcher $events
      */
     public function boot()
     {

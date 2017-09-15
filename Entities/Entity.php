@@ -4,12 +4,13 @@ namespace Modules\Dynamicfield\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 
-;
 
 class Entity extends Model
 {
     protected $table = 'dynamicfield__entities';
     protected $fillable = ['entity_id', 'field_id', 'entity_type'];
+
+
     /**
      * Create Relationship with FieldTranslation.
      *
@@ -21,13 +22,13 @@ class Entity extends Model
     }
 
     /**
-     * Create Relationship with RepeaterTranslation.
+     * Create Relationship with FieldTranslation.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function repeaters()
+    public function fieldValues()
     {
-        return $this->hasMany('Modules\Dynamicfield\Entities\RepeaterTranslation', 'entity_repeater_id', 'id');
+        return $this->hasMany('Modules\Dynamicfield\Entities\FieldTranslation', 'entity_field_id', 'id');
     }
 
     /**
@@ -35,7 +36,7 @@ class Entity extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function defindFields()
+    public function definedFields()
     {
         return $this->belongsTo('Modules\Dynamicfield\Entities\Field', 'field_id', 'id');
     }
@@ -59,66 +60,6 @@ class Entity extends Model
         return $object;
     }
 
-    public static function getAllDataFields($entityId, $entityType)
-    {
-        $fields = \DB::table('dynamicfield__entities')
-            ->join('dynamicfield__field_translations', 'dynamicfield__entities.id', '=', 'dynamicfield__field_translations.entity_field_id')
-            ->select('dynamicfield__entities.field_id', 'dynamicfield__field_translations.locale', 'dynamicfield__field_translations.value')
-            ->where('dynamicfield__entities.entity_id', '=', $entityId)
-            ->where('dynamicfield__entities.entity_type', '=', $entityType)
-            ->get();
-
-        return $fields;
-    }
-
-    public static function getAllDataTranactionRepeater($entityId, $entityType, $fieldId, $locale)
-    {
-        $fields = \DB::table('dynamicfield__entities')
-            ->join('dynamicfield__repeater_translations', function ($join) use ($locale) {
-                $join->on('dynamicfield__entities.id', '=', 'dynamicfield__repeater_translations.entity_repeater_id')->where('dynamicfield__repeater_translations.locale', '=', $locale);
-            })
-            ->select('dynamicfield__repeater_translations.id', 'dynamicfield__repeater_translations.locale')
-            ->OrderBy('dynamicfield__repeater_translations.order')
-            ->where('dynamicfield__entities.entity_id', '=', $entityId)
-            ->where('dynamicfield__entities.field_id', '=', $fieldId)
-            ->where('dynamicfield__entities.entity_type', '=', $entityType)
-            ->get();
-
-        return $fields;
-    }
-
-    public static function getAllDataTranactionRepeaterFields($entityId, $entityType, $fieldId, $locale)
-    {
-        $fields = \DB::table('dynamicfield__entities')
-            ->join('dynamicfield__repeater_translations', function ($join) use ($locale) {
-                $join->on('dynamicfield__entities.id', '=', 'dynamicfield__repeater_translations.entity_repeater_id')->where('dynamicfield__repeater_translations.locale', '=', $locale);
-            })
-            ->join('dynamicfield__repeater_values', 'dynamicfield__repeater_translations.id', '=', 'dynamicfield__repeater_values.translation_id')
-            ->select('dynamicfield__repeater_values.*')
-            ->where('dynamicfield__entities.entity_id', '=', $entityId)
-            ->where('dynamicfield__entities.field_id', '=', $fieldId)
-            ->where('dynamicfield__entities.entity_type', '=', $entityType)
-            ->get();
-
-        return $fields;
-    }
-
-    /**
-     * Get list repeater field by locale.
-     *
-     * @param $locale
-     *
-     * @return mixed
-     */
-    public function getRepeatersByLocale($locale)
-    {
-        $repeaters = $this->repeaters()
-                            ->where('locale', $locale)
-                            ->orderBy('order')
-                            ->get();
-
-        return $repeaters;
-    }
 
     /**
      * Get entities by fieldID.
@@ -140,6 +81,32 @@ class Entity extends Model
     }
 
     /**
+     * Static
+     *
+     * get all fields by entity Id and entity type
+     * entity type is a class string e.g.
+     * - Modules/ModuleName/Entities/EntityType
+     * - Modules/Blog/Entities/Post
+     * - Modules/Pages/Entities/Page
+     *
+     * @param $id
+     * @param $entityType
+     * @param $locale
+     *
+     * @return mixed
+     */
+    public static function getByEntityId($id, $entityType, $locale = 'en')
+    {
+        $entity = self::where('entity_id',$id)
+            ->where('entity_type',$entityType)
+            ->with(['definedFields','fieldValues' => function ($query) use($locale) {
+                    $query->where('parent','0')->where('parent_layout','0')->where('locale',$locale);
+            }])
+            ->get();
+        return (null === $entity) ? $entity : $entity->first();
+    }
+
+    /**
      * Find entities by entityID,type and fieldId.
      *
      * @param $query
@@ -152,8 +119,8 @@ class Entity extends Model
     public function scopeGetEntity($query, $entityId, $entityType, $fieldId)
     {
         $entities = $query->where('entity_id', $entityId)
-                        ->where('entity_type', $entityType)
-                        ->where('field_id', $fieldId)->get();
+            ->where('entity_type', $entityType)
+            ->where('field_id', $fieldId)->get();
         if ($entities->count()) {
             $object = $entities[0];
         } else {
@@ -178,56 +145,4 @@ class Entity extends Model
         return $entities;
     }
 
-    /**
-     * Duplicate field of page.
-     *
-     * @param int $pageId
-     *
-     * @return Model
-     */
-    public function duplicate($pageId = 0)
-    {
-        $entity = $this->replicate();
-        $entity->entity_id = $pageId;
-        $entity->save();
-        $type = $this->getFieldType();
-        if ($type != 'repeater') {
-            $fields = $this->Fields;
-
-            foreach ($fields as $translation) {
-                $tranReplicate = $translation->replicate();
-                $tranReplicate->entity_field_id = $entity->id;
-                $tranReplicate->save();
-            }
-        } else {
-            $repeaters = $this->Repeaters;
-
-            foreach ($repeaters as $repeater) {
-                $fields = $repeater->FieldValues;
-
-                $repeaterReplicate = $repeater->replicate();
-                $repeaterReplicate->entity_repeater_id = $entity->id;
-                $repeaterReplicate->save();
-                foreach ($fields as $translation) {
-                    $tranReplicate = $translation->replicate();
-                    $tranReplicate->translation_id = $repeaterReplicate->id;
-                    $tranReplicate->save();
-                }
-            }
-        }
-
-        return $entity;
-    }
-
-    /**
-     * Get first value in Field model.
-     *
-     * @return mixed
-     */
-    public function getFieldType()
-    {
-        $field = $this->defindFields()->first();
-
-        return $field->type;
-    }
 }

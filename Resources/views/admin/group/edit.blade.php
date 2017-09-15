@@ -8,25 +8,32 @@
         <li><a href="{{ route('dashboard.index') }}"><i class="fa fa-dashboard"></i> {{ trans('core::core.breadcrumb.home') }}</a></li>
         <li class="active">{{ trans('dynamicfield::group.title.field_group') }}</li>
     </ol>
+
+    <script>
+        var dynamicGlobalUrl = '{{ URL::to('/') . '/' . locale() }}' ;
+        window.dynamicGlobalUrl = dynamicGlobalUrl;
+    </script>
 @stop
 
 @section('styles')
     {!! Theme::script('js/vendor/ckeditor/ckeditor.js') !!}
-    {!! Theme::style('css/vendor/iCheck/flat/blue.css') !!}
-	
-	<link href="{{{ Module::asset('dynamicfield:css/jquery-ui.min.css') }}}" rel="stylesheet" type="text/css" />
-	<link href="{{{ Module::asset('dynamicfield:css/styles.css') }}}" rel="stylesheet" type="text/css" />
 
+    <link href="{{{ Module::asset('dynamicfield:css/jquery-ui.min.css') }}}" rel="stylesheet" type="text/css" />
+    <link href="{{{ Module::asset('dynamicfield:css/styles.css') }}}" rel="stylesheet" type="text/css" />
 @stop
 
 @section('content')
+    <section id="dynamicFields-app">
+        <!--'admin.dynamicfield.group.update' 'route' => ['admin.dynamicfield.group.index'] 'url' => 'dynamicfield/group/edit/62' -->
+        {{--{!! Form::open([ 'url' =>  locale() . '/backend/dynamicfield/group/edit/' . $group['id'] , 'method' => 'PUT']) !!}--}}
     {!! Form::open(['route' => ['admin.dynamicfield.group.store'], 'method' => 'post']) !!}
-    <div class="row">
-        <div class="col-md-12">
-			@include('dynamicfield::admin.group.partials.edit-form', ['fields' => $fields,'group'=>$group])
+        <div class="row">
+            <div class="col-md-12">
+                @include('dynamicfield::admin.group.partials.edit-form', ['fields' => $fields,'group'=>$group])
+            </div>
         </div>
-    </div>
-    {!! Form::close() !!}
+        {!! Form::close() !!}
+    </section>
 @stop
 
 @section('footer')
@@ -40,26 +47,6 @@
 @stop
 
 @section('scripts')
-	<script src="{{{ Module::asset('dynamicfield:js/jquery-ui.min.js') }}}"></script>
-	<script src="{{{ Module::asset('dynamicfield:js/custom.js') }}}"></script>
-	<script src="{{{ Module::asset('dynamicfield:js/sortable.js') }}}"></script>
-  
-    <script>
-        $( document ).ready(function() {
-            $('input[type="checkbox"].flat-blue, input[type="radio"].flat-blue').iCheck({
-                checkboxClass: 'icheckbox_flat-blue',
-                radioClass: 'iradio_flat-blue'
-            });
-
-            $('input[type="checkbox"]').on('ifChecked', function(){
-                $(this).parent().find('input[type=hidden]').remove();
-            });
-
-            $('input[type="checkbox"]').on('ifUnchecked', function(){
-                var name = $(this).attr('name'),
-                    input = '<input type="hidden" name="' + name + '" value="0" />';
-                $(this).parent().append(input);
-            });
-        });
-    </script>
+    <script src="{{{ Module::asset('dynamicfield:js/jquery-ui.min.js') }}}"></script>
+    <script src="{{{ Module::asset('dynamicfield:js/app.js') }}}"></script>
 @stop

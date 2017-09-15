@@ -33,13 +33,50 @@ class SidebarExtender implements \Maatwebsite\Sidebar\SidebarExtender
     {
         $menu->group(trans('core::sidebar.content'), function (Group $group) {
             $group->item(trans('dynamicfield::dynamicfield.title.dynamicfield'), function (Item $item) {
-                $item->icon('fa fa-cubes');
-                $item->weight(50);
-                $item->append('admin.dynamicfield.group.create');
-                $item->route('admin.dynamicfield.group.index');
+                $item->icon('fa fa-copy');
+                $item->weight(10);
                 $item->authorize(
-                    $this->auth->hasAccess('dynamicfield.group.index')
+                /* append */
                 );
+                $item->item(trans('dynamicfield::dynamicfield.title.options'), function (Item $item) {
+                    $item->icon('fa fa-copy');
+                    $item->weight(0);
+                    $item->append('admin.dynamicfield.options.index');
+                    $item->route('admin.dynamicfield.options.index');
+                    $item->authorize(
+                        $this->auth->hasAccess('dynamicfield.options.index')
+                    );
+                });
+
+                $item->item(trans('dynamicfield::dynamicfield.title.optionvalues'), function (Item $item) {
+                    $item->icon('fa fa-copy');
+                    $item->weight(0);
+                    $item->append('admin.dynamicfield.optionvalues.index');
+                    $item->route('admin.dynamicfield.optionvalues.index');
+                    $item->authorize(
+                        $this->auth->hasAccess('dynamicfield.optionvalues.index')
+                    );
+                });
+
+                $item->item(trans('dynamicfield::dynamicfield.title.admin'), function (Item $item) {
+                    $item->icon('fa fa-copy');
+                    $item->weight(0);
+                    $item->append('admin.dynamicfield.group.create');
+                    $item->route('admin.dynamicfield.admin.index');
+                    $item->authorize(
+                        $this->auth->hasAccess('dynamicfield.group.index')
+                    );
+                });
+                $item->item(trans('dynamicfield::dynamicfield.title.dynamicfield'), function (Item $item) {
+                    $item->icon('fa fa-copy');
+                    $item->weight(0);
+                    $item->append('admin.dynamicfield.group.create');
+                    $item->route('admin.dynamicfield.group.index');
+                    $item->authorize(
+                        $this->auth->hasAccess('dynamicfield.group.index')
+                    );
+                });
+
             });
         });
 

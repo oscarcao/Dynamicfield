@@ -6,14 +6,21 @@ use Collective\Html\FormFacade;
 use Illuminate\Http\Request;
 use Mcamara\LaravelLocalization\Facades\LaravelLocalization;
 use Modules\Core\Http\Controllers\Admin\AdminBaseController;
+use Modules\Dynamicfield\Entities\Field;
 use Modules\Dynamicfield\Entities\Group;
 use Modules\Dynamicfield\Entities\Rule;
 use Modules\Dynamicfield\Http\Requests\GroupFieldRequest;
+use Modules\Dynamicfield\Library\DynamicFieldsDataSorter;
+use Modules\Dynamicfield\Library\UseCases\StoreGroupFields;
+use Modules\Dynamicfield\Library\UseCases\UpdateFieldParentLayouts;
 use Modules\Dynamicfield\Repositories\GroupRepository;
-use Modules\Dynamicfield\Utility\DynamicFields;
-use Modules\Dynamicfield\Utility\Template;
+
+use Modules\Dynamicfield\Library\Template;
 use Modules\Page\Entities\Page;
 use Modules\Page\Repositories\PageRepository;
+use Modules\User\Entities\Sentinel\User;
+use RecursiveArrayIterator;
+use RecursiveIteratorIterator;
 use Request as BaseRequest;
 
 class GroupFieldsController extends AdminBaseController
@@ -21,17 +28,17 @@ class GroupFieldsController extends AdminBaseController
     /**
      * @var GroupRepository
      * @var PageRepository
-     * @var RoleRepository
+     * @var $template
      */
-    private $group;
-    private $page;
+    private $groupRepository;
+    private $pageRepository;
     private $template;
 
-    public function __construct(GroupRepository $group, PageRepository $page, Template $template)
+    public function __construct(GroupRepository $groupRepository, PageRepository $pageRepository, Template $template)
     {
         parent::__construct();
-        $this->group = $group;
-        $this->page = $page;
+        $this->groupRepository = $groupRepository;
+        $this->pageRepository  = $pageRepository;
         $this->template = $template;
     }
 
@@ -40,8 +47,7 @@ class GroupFieldsController extends AdminBaseController
      */
     public function index()
     {
-        $group = $this->group->all();
-
+        $group = $this->groupRepository->all();
         return view('dynamicfield::admin.group.index', compact('group'));
     }
 
@@ -50,35 +56,35 @@ class GroupFieldsController extends AdminBaseController
      *
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
-    public function create(Group $group)
+    public function create()
     {
-        $fields = $group->getListFields();
+        $group = new Group;
+        $group->name     = '';
+        $group->template = '';
+        $fields = [];
+        $all_templates = $this->template->getTemplates();
 
-        return view('dynamicfield::admin.group.edit', compact('group', 'fields'));
+        //dd($group);
+        return view('dynamicfield::admin.group.create', compact('group', 'fields', 'all_templates'));
     }
 
     /**
+     * store the data
+     *
+     * @uses GroupRepository
+     *
      * @param GroupFieldRequest $request
      *
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(GroupFieldRequest $request)
     {
-        $data = $request->all();
-        $dataGroup = $data['group'];
-        $dataFields = $data['field'];
-        // reset key of array location
-        $dataLocations     = array_values($data["location"]);
-        $newDataLocations = array_map('array_values', $dataLocations);
+        //dd('store',$request);
+        $result = StoreGroupFields::performUseCase($this->groupRepository);
 
-        $bResult = $this->group->saveData($dataGroup, $dataFields, $newDataLocations);
-        $groupId = @$data["group"]["id"];
-        $tran_core = 'core::core.messages.resource created';
-        if ($groupId > 0) {
-            $tran_core = 'core::core.messages.resource updated';
-        }
-        if ($bResult) {
-            return redirect()->route('admin.dynamicfield.group.index')->withSuccess(trans($tran_core, ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
+        if ($result['bResult']) {
+            return redirect()->route('admin.dynamicfield.group.index')
+                            ->withSuccess(trans('core::core.messages.resource created', ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
         }
 
         return redirect()->route('admin.dynamicfield.group.index');
@@ -91,9 +97,33 @@ class GroupFieldsController extends AdminBaseController
      */
     public function edit(Group $group)
     {
-        $fields     = $group->getListFields();
-        $locations  = Rule::where('group_id', '=', $group->id)->get();
+        $fields     = $this->loadGroupAndFieldData($group);
+        $locations  = Rule::where('group_id', '=', $group->id)->get()->toArray();
+        $group      = $group->toArray();
+
+        //dd($fields);
+
         return view('dynamicfield::admin.group.edit', compact('group', 'fields', 'locations'));
+    }
+
+    /**
+     * The group has data associated
+     * with it so go get it
+     *
+     * @param $group
+     *
+     * @return array|mixed
+     */
+    public function loadGroupAndFieldData($group)
+    {
+        $groupId   = $group->id;
+        $groupName = $group->name;
+
+        $fields = Field::where('group_id','=',$group->id)->where('parent','0')->orderBy('order','asc')->get();
+        $dynamicFieldsDataSorter = new DynamicFieldsDataSorter($fields, $getFieldTranslationData = false, $options = null);
+        $fields = $dynamicFieldsDataSorter->sortOutTheFields();
+
+        return $fields;
     }
 
     /**
@@ -104,9 +134,11 @@ class GroupFieldsController extends AdminBaseController
      */
     public function update(Group $group, Request $request)
     {
-        $this->group->update($group, $request->all());
-
-        return redirect()->route('admin.dynamicfield.group.index')->withSuccess(trans('core::core.messages.resource updated', ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
+        $result = StoreGroupFields::performUseCase($this->groupRepository, $isEdit = true);
+        
+        //return redirect()->route('admin.dynamicfield.group.edit');
+        return redirect()->back()
+                        ->withSuccess(trans('core::core.messages.resource updated', ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
     }
 
     /**
@@ -116,91 +148,84 @@ class GroupFieldsController extends AdminBaseController
      */
     public function destroy(Group $group)
     {
-        $this->group->destroy($group);
-
-        return redirect()->route('admin.dynamicfield.group.index')->withSuccess(trans('core::core.messages.resource deleted', ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));
+        $this->groupRepository->destroy($group);
+        
+        return redirect()->route('admin.dynamicfield.group.index')
+                        ->withSuccess(trans('core::core.messages.resource deleted', ['name' => trans('dynamicfield::dynamicfield.title.field_group')]));;
     }
+
+
+
 
     /**
-     * @return \Illuminate\Http\JsonResponse
+     * @param Page $page
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function renderOption()
-    {
-        $type = $_REQUEST['field_type'];
-        $index = $_REQUEST['field_index'];
-        $repeaterIndex = $index;
-
-        $optionClass = "Modules\Dynamicfield\Utility\Enum\Options\\" . ucfirst($type);
-        $options = $optionClass::getList();
-        $prefixName = 'field[%s]';
-        $viewPath = 'dynamicfield::admin.group.partials.fields.' . $type;
-        $fields = array();
-        $html = view($viewPath, compact('index', 'options', 'fields', 'prefixName', 'repeaterIndex'));
-
-        return response()->json(['html' => $html->render()]);
-    }
-
-    /**
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function renderRepeaterOption()
-    {
-        $type = $_REQUEST['field_type'];
-        $index = $_REQUEST['field_index'];
-        $repeaterIndex = $_REQUEST['repeater_index'];
-
-        $prefixName = sprintf('field[%s][repeater][%s]', $repeaterIndex, $index);
-        $optionClass = "Modules\Dynamicfield\Utility\Enum\Options\\" . ucfirst($type);
-        $options = $optionClass::getList();
-        $viewPath = 'dynamicfield::admin.group.partials.fields.' . $type;
-        $html = view($viewPath, compact('index', 'options', 'repeaterIndex', 'prefixName'));
-
-        return response()->json(['html' => $html->render()]);
-    }
-
-    /**
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function ajaxRender()
-    {
-        $this->assetPipeline->requireJs('ckeditor.js');
-        $request = BaseRequest::all();
-        $template = $request['template'];
-        $entityType = $request['entity_type'];
-        $id = $request['id'];
-        $entity = new $entityType();
-        if (get_class($entity) == "stdClass") {
-            $entity->id = null;
-        } else {
-            $entity = $entity->firstOrNew(['id' => $id]);
-        }
-        $entity->template = $template;
-        $advanceFields = new DynamicFields($entity);
-        $advanceFields->init();
-        $locale = array_keys(LaravelLocalization::getSupportedLocales());
-        $jsonData = array();
-        foreach ($locale as $v) {
-            $jsonData['html'][$v] = $advanceFields->renderFields($v);
-        }
-        $jsonData['locale'] = $locale;
-
-        return response()->json($jsonData);
-    }
-
     public function duplicate(Page $page)
     {
-        $this->page->replicate($page);
-        
-        return redirect()->route('admin.page.page.index')->withSuccess(trans('dynamicfield::messages.page.duplicate successful'));
+        //$this->groupRepository->replicate($page);
+
+        return redirect()->route('admin.page.page.index')
+                        ->withSuccess(trans('dynamicfield::messages.page.duplicate successful'));;
     }
 
     /**
+     * collectUsers
+     *
      * @return \Illuminate\Http\JsonResponse
+     */
+    public function collectUsers()
+    {
+        $users = User::all();
+        $allFields = [];
+        foreach($users as $user)
+        {
+            $newItem = [
+                'id'    => $user['id'],
+                'label' => $user['first_name'] . ' ' . $user['last_name'],
+                'email' => $user['email']
+            ];
+            array_push($allFields, $newItem);
+        }
+        return response()->json($allFields);
+    }
+
+    /**
+     * collectEntities
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function collectEntities()
+    {
+        $entities  = config('asgard.dynamicfield.config.entity-type');
+        $allFields = [];
+        foreach($entities as $entityPath => $entityName)
+        {
+            $entityItems = $entityPath::all()->toArray();
+
+            foreach($entityItems as $item)
+            {
+                $newItem = [
+                    'id'    => $item['id'],
+                    'label' => (isset($item['title'])) ?  $entityName . ' - ' . $item['title'] : $entityName . ' - ' . $item['slug'],
+                    'type'  => $entityPath
+                ];
+                array_push($allFields, $newItem);
+            }
+        }
+        return response()->json($allFields);
+    }
+
+
+    /**
+     * renderLocationDrop
+     *
+     * @return \Collective\Html\FormFacade\Select
      */
     public function renderLocationDrop()
     {
         $selected   = $_REQUEST['selected'];
-        $dropName    = $_REQUEST['dropName'];
+        $dropName   = $_REQUEST['dropName'];
         $value      = null;
         if ($_REQUEST['value'] != "undefined") {
             $value    = $_REQUEST['value'];
@@ -216,8 +241,9 @@ class GroupFieldsController extends AdminBaseController
                 break;
         }
         //$html = FormFacade::select($name, $arrData, $value, ['class' => "form-control"]);
+        //return response()->json(['html' => $html]);
 
         return response(FormFacade::select($name, $arrData, $value, ['class' => "form-control"]));
-        //return response()->json(['html' => $html]);
     }
+
 }

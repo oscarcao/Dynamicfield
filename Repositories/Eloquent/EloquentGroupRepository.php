@@ -3,14 +3,22 @@
 namespace Modules\Dynamicfield\Repositories\Eloquent;
 
 use DB;
+//use Illuminate\Support\Facades\DB;
 use Modules\Core\Repositories\Eloquent\EloquentBaseRepository;
 use Modules\Dynamicfield\Entities\Field;
+use Modules\Dynamicfield\Entities\FieldTranslation;
+use Modules\Dynamicfield\Entities\FlexiblecontentField;
 use Modules\Dynamicfield\Entities\RepeaterField;
 use Modules\Dynamicfield\Entities\Rule;
+use Modules\Dynamicfield\Library\Data\ParseChoices;
+use Modules\Dynamicfield\Library\Repeaters\RepeaterFieldTranslations;
 use Modules\Dynamicfield\Repositories\GroupRepository;
 
 class EloquentGroupRepository extends EloquentBaseRepository implements GroupRepository
 {
+
+    use ParseChoices;
+
     /**
      * @param int $id
      *
@@ -20,10 +28,20 @@ class EloquentGroupRepository extends EloquentBaseRepository implements GroupRep
     {
         return $this->model->find($id);
     }
+
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Model|\Modules\Core\Repositories\Eloquent\Model
+     */
     public function getGroup()
     {
         return $this->model;
     }
+
+
+    /**
+     * @return \Illuminate\Support\Collection|mixed|static
+     */
     public function getFields()
     {
         return $this->model->Fields;
@@ -36,74 +54,113 @@ class EloquentGroupRepository extends EloquentBaseRepository implements GroupRep
     {
         return $this->model->orderBy('id', 'DESC')->get();
     }
+
     /**
+     * So we wish to save data, the data is split out to go into
+     * group, fields and rules
+     *
+     * @param $group
+     * @param $fields
+     * @param $rules
+     * @param $isEdit
+     *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function saveData($group, $fields, $locations)
+    public function saveData($group, $fields, $rules, $isEdit)
     {
-        $bResult = false;
-        $groupId = !empty($group['id']) ? $group['id'] : 0;
-        $itemsDeleted = $group['delete'];
-        $itemsRepeaterDeleted = $group['delete_repeater'];
+        //dd($group, $fields, $rules);
+        $bResult      = false;
+        $groupId      = !empty($group['id']) ? $group['id'] : 0;
 
         DB::beginTransaction();
+
         try {
-            if (!empty($itemsDeleted)) {
-                $this->deleteFields($itemsDeleted);
-            }
-            if (!empty($itemsRepeaterDeleted)) {
-                $this->deleteRepeaterField($itemsRepeaterDeleted);
-            }
-            $groupModel = $this->model->firstOrNew(['id' => $groupId]);
+            $groupModel       = $this->model->firstOrNew(['id' => $groupId]);
             $groupModel->name = $group['name'];
             //$groupModel->template = $group['template'];
-
             $groupModel->save();
-
             $groupId = $groupModel->id;
-            $this->saveFields($groupId, $fields);
-            $this->saveLocations($groupId, $locations);
+
+            $this->saveFields($groupId, $fields, $isEdit);
+            $this->saveRules($groupId, $rules);
+
             DB::commit();
             $bResult = true;
+
         } catch (\Exception $ex) {
             DB::rollback();
+            //dd('exception!',$ex);
+            $bResult = false;
         }
 
         return $bResult;
     }
 
-    public function saveFields($groupId, $fields)
+    /**
+     * Save the fields
+     *
+     * @param $groupId
+     * @param $fields
+     * @param $isEdit
+     *
+     * @return null
+     */
+    public function saveFields($groupId, $fields, $isEdit)
     {
-        unset($fields['repeater_clone']);
         unset($fields['field_clone']);
+        $flexibleContentFields = [];
+        $this->fieldsToSave = $fields;
+        //dd($fields, $groupId);
         if (count($fields)) {
             foreach ($fields as $field) {
-                $name = $field['name'];
-                $type = $field['type'];
-                $order = $field['order'];
-                $id = $field['id'] != 'field_clone' ? $field['id'] : 0;
-                $fieldModel = Field::firstOrNew(['id' => $id]);
 
-                $fieldModel->group_id = $groupId;
-                $fieldModel->name = $name;
-                $fieldModel->type = $type;
-                $fieldModel->order = $order;
-                $fieldModel->data = $this->getFieldData($field);
+                /*
+                 * if the field has not been updated no need to save it
+                 * will also change js to not save but this is sense
+                 * checking to ensure it does not save again
+                 */
+                $fieldModel = Field::firstOrNew(['unique_id' => $field['key']]);
+
+                //dd($fieldModel, $field);
+
+                $fieldModel->group_id      = $groupId;
+                $fieldModel->name          = $field['name'];
+                $fieldModel->slug          = $field['slug'];
+                $fieldModel->type          = $field['type'];
+                $fieldModel->order         = $field['order'];
+                $fieldModel->parent        = $field['parent'];
+                $fieldModel->parent_layout = (isset($field['parent_layout']) ? $field['parent_layout'] : 0);
+                $fieldModel->unique_id     = $field['key'];
+                $fieldModel->data          = $this->getFieldsForSerializationData($field);
                 $fieldModel->save();
+                //dd($fieldModel);
 
-                $fieldId = $fieldModel->id;
-                $this->saveRepeaterField($fieldId, $field);
             }
         }
+
+
+
+        return true;
     }
 
-    public function saveLocations($groupId, $locations)
+
+
+    /**
+     * Save the rules of the dynamic Fields
+     *
+     * @param $groupId
+     * @param $rules
+     *
+     * @return null
+     */
+    public function saveRules($groupId, $rules)
     {
         Rule::where('group_id', '=', $groupId)->delete();
-        if (count($locations)) {
-            foreach ($locations as $location) {
+
+        if (count($rules)) {
+            foreach ($rules as $rule) {
                 $ruleModel = new Rule();
-                $strResult = json_encode($location);
+                $strResult = serialize($rule);
                 $ruleModel->group_id = $groupId;
                 $ruleModel->rule = $strResult;
                 $ruleModel->save();
@@ -111,58 +168,221 @@ class EloquentGroupRepository extends EloquentBaseRepository implements GroupRep
         }
     }
 
-    public function saveRepeaterField($fieldId, $data)
-    {
-        if (isset($data['repeater'])) {
-            $repeaters = $data['repeater'];
-            unset($repeaters['repeater_clone']);
-            unset($repeaters['field_clone']);
 
-            if (count($repeaters)) {
-                foreach ($repeaters as $field) {
-                    $name = $field['name'];
-                    $type = $field['type'];
-                    $order = $field['order'];
-                    $id = $field['id'];
-                    $fieldModel = RepeaterField::firstOrNew(['id' => $id]);
-                    $fieldModel->field_id = $fieldId;
-                    $fieldModel->name = $name;
-                    $fieldModel->type = $type;
-                    $fieldModel->order = $order;
-                    $fieldModel->data = $this->getFieldData($field);
-                    $fieldModel->save();
+    /**
+     * delete fields
+     *
+     * @param $strList
+     *
+     * @return int
+     */
+    public function deleteFields($deletedFields)
+    {
+        DB::beginTransaction();
+
+        try {
+
+            //dd($deletedFields);
+            $collection = collect($deletedFields);
+
+            $pluckedIds = $collection->pluck('id');
+            $pluckedIds->all();
+
+            $pluckedFieldIds = $collection->pluck('unique_id');
+            $pluckedFieldIds->all();
+
+            Field::destroy($pluckedIds->toArray());
+
+            //dd($deletedFields,$pluckedIds->toArray(),$pluckedFieldIds->toArray());
+            /*
+             * so we succeeded deleting fields, now we must go off
+             * and find all associated Field Values
+             */
+            //$this->deleteFieldValues($pluckedFieldIds->toArray());
+            $this->deleteFieldValues($deletedFields);
+
+            DB::commit();
+            $deletedResult = true;
+
+        } catch (\Exception $ex) {
+            DB::rollback();
+            //dd('exception!',$ex);
+            $deletedResult = false;
+        }
+
+        return $deletedResult;
+    }
+
+    /**
+     * delete field values associated with the field
+     * we do not wish to keep this data as their is no way to
+     * get it in future if the field no longer exists
+     *
+     * @param $strList
+     *
+     * @return int
+     */
+    public function deleteFieldValues($fieldUniqueIds)
+    {
+        DB::beginTransaction();
+
+        $deletedRows = [];
+
+        try {
+
+            array_walk($fieldUniqueIds,function($value, $key){
+                //dd('deleteFieldValues array_walk',$key, $value);
+                if(RepeaterFieldTranslations::DoWeNeedToUpdate($value) === true){
+                    RepeaterFieldTranslations::UpdateFieldTranslations($value);
                 }
-            }
+                $deletedRows[$key][] = FieldTranslation::where('field_id', $value['unique_id'])->delete();
+            });
+
+            DB::commit();
+            $deletedResult = true;
+
+        } catch (\Exception $ex) {
+            DB::rollback();
+            //dd('exception!',$ex);
+            $deletedResult = false;
         }
+
+        $deletedRows['result'] = $deletedResult;
+
+        return $deletedRows;
     }
 
-    private function deleteFields($strList)
+
+    /**
+     * updateLayoutFieldValues
+     *
+     * so if a layout has been updated/deleted then we need to go find
+     * all field values and update them
+     *
+     * @param $layouts
+     *
+     * @return array
+     */
+    public function updateLayoutFieldValues($layouts)
     {
-        $items = explode(',', $strList);
-        \Debugbar::info($items);
-        \Debugbar::info('go to detroy');
+        DB::beginTransaction();
 
-        return Field::destroy($items);
-    }
-    private function deleteRepeaterField($strList)
-    {
-        $items = explode(',', $strList);
+        $updatedRows = [];
 
-        return RepeaterField::destroy($items);
-    }
+        try {
+            // get the fields of the layout values to update
+            array_walk($layouts,function($value, $key){
+                $layoutsToUpdate = FieldTranslation::where('field_id', $value['parentId'])->get();
+                // loop through the data value layout
+                $updatedRows[$key][] = $this->loopThroughFlexResults($layoutsToUpdate,$value);
+            });
 
-    private function getFieldData($field)
-    {
-        $type = $field['type'];
-        $opitionClass = "Modules\Dynamicfield\Utility\Enum\Options\\" . ucfirst($type);
-        $options = $opitionClass::getKeys();
+            DB::commit();
+            $deletedResult = true;
 
-        $json = array();
-        foreach ($options as $k => $v) {
-            $json[$v] = $field[$v];
+        } catch (\Exception $ex) {
+            DB::rollback();
+            //dd('exception!',$ex);
+            $deletedResult = false;
         }
-        $strResult = json_encode($json);
 
-        return $strResult;
+        $updatedRows['result'] = $deletedResult;
+
+        return $updatedRows;
+    }
+
+
+    /**
+     * get field dat
+     *
+     * @param $field
+     *
+     * @return string
+     */
+    private function getFieldsForSerializationData($field)
+    {
+        //dd('getFieldsForSerializationData',$field);
+        $type        = $field['type'];
+        $optionClass = "Modules\Dynamicfield\Library\Enum\Options\\" . ucfirst($type);
+
+        $options        = $optionClass::getKeys();
+        $mapped         = $this->mapDataToOptions($options, $field);
+        $serializedData = serialize($mapped);
+
+        return $serializedData;
+    }
+
+    /**
+     * This method maps the incoming field data to the
+     * fields of the field type
+     *
+     * @param $options
+     *
+     * @return array
+     */
+    private function mapDataToOptions($options, $field)
+    {
+        $data = [];
+
+        foreach ($options as $k => $v)
+        {
+            //$data[$v] = (isset($field[$v])) ? $this->formatOption($field[$v], $v, $field) : '';
+            $data[$v] = (isset($field[$v])) ? $field[$v] : '';
+        }
+
+        return $data;
+    }
+
+
+    /**
+     * loopThroughFlexResults
+     *
+     * @param $layoutsToUpdate
+     * @param $layout
+     *
+     * @return mixed
+     */
+    protected function loopThroughFlexResults($layoutsToUpdate,$layout)
+    {
+        // remove the now delete layout and update
+        $updated = $layoutsToUpdate->map(function ($item, $key) use($layout) {
+
+            // json_decode to get field layouts we need to loop through
+            $fieldValue = json_decode($item['value']);
+            //dd('loopThroughUpdateLayoutData array_walk',$key, $item, $fieldValue,$layout);
+
+            // loop through the data value layout
+            $newFieldValue = $this->loopThroughLayoutsDeleteFields($fieldValue,$layout);
+
+            // json_encode it once again
+            $item['value'] = json_encode($newFieldValue);
+
+            // save the updated model
+            $item->save();
+
+            return $item;
+        });
+
+        return $updated;
+    }
+
+
+
+    /**
+     * loopThroughUpdateLayoutData
+     *
+     * @param $fieldValueLayouts
+     * @param $layout
+     *
+     * @return mixed
+     */
+    protected function loopThroughLayoutsDeleteFields($fieldValueLayouts,$layout)
+    {
+        // remove the now deleted layout and update
+        $newFieldValue = array_filter($fieldValueLayouts,function($value) use($layout){
+            return ($value->layoutParentKey != $layout['key']);
+        });
+
+        return $newFieldValue;
     }
 }

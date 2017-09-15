@@ -8,6 +8,10 @@
         <li><a href="{{ route('dashboard.index') }}"><i class="fa fa-dashboard"></i> {{ trans('core::core.breadcrumb.home') }}</a></li>
         <li class="active">{{ trans('dynamicfield::group.title.field_group') }}</li>
     </ol>
+    <script>
+        var dynamicGlobalUrl = '{{ URL::to('/') . '/' . locale() }}' ;
+        window.dynamicGlobalUrl = dynamicGlobalUrl;
+    </script>
 @stop
 @section('content')
     <div class="row">
@@ -64,6 +68,7 @@
                         </tbody>
                         <tfoot>
                         <tr>
+                            <th>{{ trans('dynamicfield::group.table.id') }}</th>
 							<th>{{ trans('dynamicfield::group.table.name') }}</th>
                             <th>{{ trans('dynamicfield::group.table.field_count') }}</th>
                             <th>{{ trans('core::core.table.actions') }}</th>

@@ -5,7 +5,10 @@ return [
         'dynamicfield' => 'Dynamic Fields',
     ],
     'title' => [
+        'options' => 'Option Fields',
+        'optionvalues' => 'Option Values',
         'dynamicfield' => 'Dynamic Fields',
+        'admin' => 'Admin Page',
         'edit' => 'Edit Group Field',
         'create' => 'Add New Group Field',
         'field_group' => 'Field Group',

@@ -2,10 +2,12 @@
 <link  media="all" type="text/css" rel="stylesheet"  href="{{{ Module::asset('dynamicfield:css/styles.css') }}}"/>
 @section('scripts')
 	@parent
-	<script src="{!! Module::asset('dynamicfield:js/jquery-ui.min.js') !!}"></script>
-	<script src="{!! Module::asset('dynamicfield:js/dynamic-fields.js') !!}"></script>
-	<script src="{!! Module::asset('dynamicfield:js/custom.js') !!}"></script>
+    <script src="{{{ Module::asset('dynamicfield:js/app.js') }}}"></script>
 @stop
+<?php
+//dd('ffe');
+?>
+@if(1===0)
 <script type="text/javascript">
 	<?php 
             // assign $entityType from template file ;
@@ -25,7 +27,7 @@
             // assign $entityType from template file ;
             $templateId = 'template';
             $entityType = get_class($entityDynamic);
-            $entityId = @$entityDynamic->id ? $entityDynamic->id : '0';
+            $entityId   = @$entityDynamic->id ? $entityDynamic->id : '0';
             $entityType = str_replace('\\', '\\\\', $entityType);
     ?>
 	$(document).ready(function() {
@@ -33,4 +35,5 @@
 		initDynamicEditor();
 	})
 
-</script>			
+</script>
+@endif

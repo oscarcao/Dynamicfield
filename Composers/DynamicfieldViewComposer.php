@@ -3,7 +3,7 @@
 namespace Modules\Dynamicfield\Composers;
 
 use Illuminate\Contracts\View\View;
-use Modules\Dynamicfield\Utility\DynamicFields;
+//use Modules\Dynamicfield\Library\DynamicFields;
 
 class DynamicfieldViewComposer
 {
@@ -27,10 +27,13 @@ class DynamicfieldViewComposer
     {
         $entityDynamic  = null;
         $data    = $view->getData();
+
+        //dd($data);
         //TODO Fix with event
         if (count($data)) {
             $arrType = config('asgard.dynamicfield.config.entity-type');
             $arrType =  array_keys($arrType);
+            //dd($data, $arrType, $view);
             // edit entity
             foreach ($data as $item) {
                 if (is_object($item)) {
@@ -42,14 +45,18 @@ class DynamicfieldViewComposer
                 }
             }
         }
+
+        //dd($entityDynamic);
         // initial model data for create new;
         if (is_null($entityDynamic)) {
             $router    = \Request::route()->getName();
+            //dd($router);
             $arrCreateRouter    = config('asgard.dynamicfield.config.router');
             if (array_key_exists($router, $arrCreateRouter)) {
                 $entityDynamic = new $arrCreateRouter[$router];
             }
         }
+        //dd($entityDynamic);
         $view->with('entityDynamic', $entityDynamic);
 
         return $view;

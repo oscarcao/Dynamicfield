@@ -1,5 +1,11 @@
-url: https://github.com/stone-lab/Dynamicfield
+url: N/A
 versions:
-    "0.8.0":
-        added:
-            - Initial setup
+    "0.9":
+        changes:
+            - Minor styling change to field layouts
+            - Removed all other Entity types except for Page
+            - Fixed switching of module/template drop down for adding location rules
+            - "Updated readme file with required page config settings"
+            - "Rebranded namespace back to stone-lab/Dynamicfield"
+            - "Based off diquinnyonk/Dynamicfield-0.2"
+            - "Compatibility with asgardCMS v2.0"
