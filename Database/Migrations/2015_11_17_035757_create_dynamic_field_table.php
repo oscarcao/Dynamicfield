@@ -76,7 +76,7 @@ class CreateDynamicfieldTable extends Migration
         Schema::drop('dynamicfield__field_translations');
         Schema::drop('dynamicfield__entities');
         Schema::drop('dynamicfield__fields');
-        Schema::drop('dynamicfield__groups');
         Schema::drop('dynamicfield__rules');
+        Schema::drop('dynamicfield__groups');
     }
 }
